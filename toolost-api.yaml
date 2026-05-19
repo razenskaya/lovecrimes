@@ -1,0 +1,2152 @@
+openapi: 3.0.3
+info:
+  title: Too Lost Music Distribution API
+  description: |
+    Unofficial OpenAPI specification for the Too Lost music distribution platform (toolost.com).
+    Generated from observed network traffic. Covers authentication, release management,
+    distribution, analytics, wallet/payouts, reporting, and platform utilities.
+  version: 1.0.0
+  contact:
+    name: Too Lost Support
+    url: https://toolost.com/support/contact
+    email: support@toolost.com
+  termsOfService: https://toolost.com/terms
+
+servers:
+  - url: https://toolost.com/api
+    description: Production
+
+tags:
+  - name: Auth
+    description: Authentication and user session
+  - name: Distribution
+    description: Release creation, editing, and track management
+  - name: Portal - Releases
+    description: Release catalog browsing and management
+  - name: Portal - Analytics
+    description: Streaming analytics and channel data
+  - name: Portal - Wallet
+    description: Wallet balance, transactions, and payouts
+  - name: Portal - Sales
+    description: Sales data and revenue
+  - name: Portal - Reports
+    description: Report generation and download
+  - name: Portal - Dashboard
+    description: Dashboard widgets and summary data
+  - name: Portal - Notifications
+    description: User notifications
+  - name: Portal - Preferences
+    description: Artist and label preferences
+  - name: Portal - Audience
+    description: Fan/audience data
+  - name: Portal - Defender
+    description: Content protection (whitelist/blocklist)
+  - name: Portal - Quicklinks
+    description: Smart links for releases
+  - name: Portal - Funding
+    description: Advance funding and submissions
+  - name: Portal - Publishing
+    description: Publishing administration
+  - name: Portal - AI Insights
+    description: AI-powered artwork and insights
+  - name: Portal - Award Monitoring
+    description: Chart and award tracking by market
+  - name: Portal - Playlisting
+    description: Playlist pitching
+  - name: Portal - Channel Monetization
+    description: YouTube channel monetization and CID
+  - name: Portal - Mixing
+    description: AI mixing tools
+  - name: Portal - Manager
+    description: User/team manager access
+  - name: Video
+    description: Video distribution
+  - name: Shared
+    description: Static data (countries, platforms, genres)
+  - name: Profile
+    description: User profile and payout settings
+
+paths:
+  # ──────────────────────────────────────────────
+  # AUTH
+  # ──────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                googleCaptchaToken:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  token:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      operationId: getMe
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+
+  /auth/get-change-logs:
+    get:
+      tags: [Auth]
+      summary: Get platform change logs
+      operationId: getChangeLogs
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Change log entries
+
+  # ──────────────────────────────────────────────
+  # DISTRIBUTION
+  # ──────────────────────────────────────────────
+  /distribution/init-release:
+    post:
+      tags: [Distribution]
+      summary: Initialize a new release
+      operationId: initRelease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseInput'
+      responses:
+        '200':
+          description: Release initialized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  id:
+                    type: integer
+                    description: New release ID
+
+  /distribution/save/release:
+    post:
+      tags: [Distribution]
+      summary: Save/update a release
+      operationId: saveRelease
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseInput'
+      responses:
+        '200':
+          description: Release saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  id:
+                    type: integer
+
+  /distribution/save/tracks:
+    post:
+      tags: [Distribution]
+      summary: Save tracks for a release
+      operationId: saveTracks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [release_id, tracks]
+              properties:
+                release_id:
+                  type: integer
+                tracks:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrackInput'
+      responses:
+        '200':
+          description: Tracks saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  release:
+                    type: object
+                    properties:
+                      tracks:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Track'
+
+  /distribution/release/{releaseId}:
+    get:
+      tags: [Distribution]
+      summary: Get release details (draft/uploader view)
+      operationId: getDistributionRelease
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Release details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    $ref: '#/components/schemas/Release'
+
+  /distribution/release/{releaseId}/load-platforms:
+    get:
+      tags: [Distribution]
+      summary: Get selected platforms for a release
+      operationId: loadReleasePlatforms
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Platform selections
+
+  /distribution/release/{releaseId}/load-territories:
+    get:
+      tags: [Distribution]
+      summary: Get selected territories for a release
+      operationId: loadReleaseTerritories
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Territory selections
+
+  /distribution/release/live/{releaseId}:
+    get:
+      tags: [Distribution]
+      summary: Get a live (distributed) release
+      operationId: getLiveRelease
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Live release details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    $ref: '#/components/schemas/Release'
+
+  /distribution/releases/{releaseId}:
+    get:
+      tags: [Distribution]
+      summary: Get release info (alternate endpoint)
+      operationId: getDistributionReleaseAlt
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Release details
+
+  /distribution/cover-licensing:
+    get:
+      tags: [Distribution]
+      summary: Get cover song licensing info
+      operationId: getCoverLicensing
+      responses:
+        '200':
+          description: Cover licensing data
+
+  /distribution/track-manager:
+    get:
+      tags: [Distribution]
+      summary: List tracks across releases
+      operationId: getDistributionTrackManager
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Paginated track list
+
+  /distribution/user/label/artists:
+    get:
+      tags: [Distribution]
+      summary: List artists under user's label
+      operationId: getLabelArtists
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Paginated artist list
+
+  /distribution/video/reference-releases:
+    get:
+      tags: [Video]
+      summary: Search releases for video distribution
+      operationId: getVideoReferenceReleases
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching releases
+
+  /distribution/video/reference-tracks/{releaseId}:
+    get:
+      tags: [Video]
+      summary: Get tracks for video distribution
+      operationId: getVideoReferenceTracks
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Tracks available for video
+
+  # ──────────────────────────────────────────────
+  # PORTAL - DASHBOARD
+  # ──────────────────────────────────────────────
+  /portal/dashboard/wallet:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Dashboard wallet summary
+      operationId: getDashboardWallet
+      responses:
+        '200':
+          description: Wallet balance summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    $ref: '#/components/schemas/WalletBalance'
+
+  /portal/dashboard/can-instant-access:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Check instant advance eligibility
+      operationId: canInstantAccess
+      responses:
+        '200':
+          description: Eligibility status
+
+  /portal/dashboard/pending-releases:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Get pending releases count/list
+      operationId: getPendingReleases
+      responses:
+        '200':
+          description: Pending releases
+
+  /portal/dashboard/submissions:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Get pending submissions across features
+      operationId: getDashboardSubmissions
+      responses:
+        '200':
+          description: Submissions overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  royalty_splits:
+                    type: array
+                    items:
+                      type: object
+                  playlisting:
+                    type: array
+                    items:
+                      type: object
+                  publishing:
+                    type: array
+                    items:
+                      type: object
+                  publishing_application:
+                    type: object
+                    nullable: true
+                  greenlisting:
+                    type: array
+                    items:
+                      type: object
+                  blocklisting:
+                    type: array
+                    items:
+                      type: object
+                  spotify_discovery_mode:
+                    type: array
+                    items:
+                      type: object
+
+  /portal/dashboard/tickets:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Get support tickets summary
+      operationId: getDashboardTickets
+      responses:
+        '200':
+          description: Tickets overview
+
+  /portal/dashboard/logs:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Get activity logs
+      operationId: getDashboardLogs
+      responses:
+        '200':
+          description: Recent activity logs
+
+  # ──────────────────────────────────────────────
+  # PORTAL - RELEASES
+  # ──────────────────────────────────────────────
+  /portal/release/:
+    get:
+      tags: [Portal - Releases]
+      summary: List all releases (paginated)
+      operationId: listReleases
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: searchType
+          in: query
+          schema:
+            type: string
+            enum: [Release Title, UPC, ISRC, Catalog Number]
+        - name: filter
+          in: query
+          schema:
+            type: string
+            enum: [All, Live, Pending, Draft, Takedown, Review, Rejected]
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [Latest, Oldest, A-Z, Z-A]
+      responses:
+        '200':
+          description: Paginated releases
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submissions:
+                    $ref: '#/components/schemas/PaginatedResponse'
+
+  /portal/release/dashboard/latest:
+    get:
+      tags: [Portal - Releases]
+      summary: Get latest releases for dashboard
+      operationId: getLatestReleases
+      responses:
+        '200':
+          description: Latest releases
+
+  /portal/release/single/{releaseId}:
+    get:
+      tags: [Portal - Releases]
+      summary: Get single release detail
+      operationId: getSingleRelease
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Full release details
+
+  /portal/release/release-comments/{releaseId}:
+    get:
+      tags: [Portal - Releases]
+      summary: Get comments on a release
+      operationId: getReleaseComments
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Release comments
+
+  /portal/release/single-participants/{releaseId}:
+    get:
+      tags: [Portal - Releases]
+      summary: Get participants for a release
+      operationId: getReleaseParticipants
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Participant list
+
+  /portal/release/edit-request:
+    post:
+      tags: [Portal - Releases]
+      summary: Submit an edit request for a live release
+      operationId: submitEditRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [release, data]
+              properties:
+                release:
+                  type: integer
+                  description: Release ID
+                data:
+                  type: object
+                  properties:
+                    releaseEdits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                          section:
+                            type: string
+                          value:
+                            type: string
+                          oldValue:
+                            type: string
+                    trackEdits:
+                      type: array
+                      items:
+                        type: object
+      responses:
+        '200':
+          description: Edit request submitted
+
+  /portal/release/track-manager/:
+    get:
+      tags: [Portal - Releases]
+      summary: Browse all tracks (paginated)
+      operationId: getPortalTrackManager
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [Latest, Oldest]
+      responses:
+        '200':
+          description: Paginated track list
+
+  /portal/release/transfer-in-history/:
+    get:
+      tags: [Portal - Releases]
+      summary: Get catalog transfer-in history
+      operationId: getTransferInHistory
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Transfer history
+
+  # ──────────────────────────────────────────────
+  # PORTAL - ANALYTICS
+  # ──────────────────────────────────────────────
+  /portal/analytics/spotify:
+    get:
+      tags: [Portal - Analytics]
+      summary: Spotify analytics overview
+      operationId: getSpotifyAnalytics
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Date filter (e.g. "7d", "30d", "all")
+      responses:
+        '200':
+          description: Spotify streaming data
+
+  /portal/analytics/spotify/tracks:
+    get:
+      tags: [Portal - Analytics]
+      summary: Spotify analytics by track
+      operationId: getSpotifyTrackAnalytics
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Per-track Spotify data
+
+  /portal/analytics/spotify/territories:
+    get:
+      tags: [Portal - Analytics]
+      summary: Spotify analytics by territory
+      operationId: getSpotifyTerritoryAnalytics
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Per-territory Spotify data
+
+  /portal/analytics/spotify/snapshot:
+    get:
+      tags: [Portal - Analytics]
+      summary: Spotify analytics snapshot
+      operationId: getSpotifySnapshot
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Spotify snapshot metrics
+
+  /portal/analytics/channel-overview:
+    get:
+      tags: [Portal - Analytics]
+      summary: Analytics overview for a specific platform
+      operationId: getChannelOverview
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Platform identifier (e.g. spotify, apple, tiktok)
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Platform analytics
+
+  /portal/analytics/releases/:
+    get:
+      tags: [Portal - Analytics]
+      summary: Analytics by release
+      operationId: getAnalyticsReleases
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Per-release analytics
+
+  # ──────────────────────────────────────────────
+  # PORTAL - SALES
+  # ──────────────────────────────────────────────
+  /portal/sales/total:
+    get:
+      tags: [Portal - Sales]
+      summary: Get total sales/earnings
+      operationId: getSalesTotal
+      responses:
+        '200':
+          description: Total sales figure
+
+  /portal/sales/releases:
+    get:
+      tags: [Portal - Sales]
+      summary: Sales broken down by release
+      operationId: getSalesByRelease
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Per-release sales data
+
+  /portal/sales/notification:
+    get:
+      tags: [Portal - Sales]
+      summary: Sales notifications
+      operationId: getSalesNotification
+      parameters:
+        - name: section
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sales notification data
+
+  # ──────────────────────────────────────────────
+  # PORTAL - WALLET
+  # ──────────────────────────────────────────────
+  /portal/wallet/balance:
+    get:
+      tags: [Portal - Wallet]
+      summary: Get wallet balance details
+      operationId: getWalletBalance
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    $ref: '#/components/schemas/WalletBalance'
+                  last_months_earnings:
+                    type: object
+                    properties:
+                      split_email:
+                        type: string
+                      value:
+                        type: string
+                        format: date
+                      type:
+                        type: string
+                      dividends:
+                        type: string
+                      id:
+                        type: integer
+
+  /portal/wallet/estimates:
+    get:
+      tags: [Portal - Wallet]
+      summary: Get earnings estimates
+      operationId: getWalletEstimates
+      responses:
+        '200':
+          description: Earnings estimate
+        '403':
+          description: Feature not available for this account
+
+  /portal/wallet/transactions:
+    get:
+      tags: [Portal - Wallet]
+      summary: Get wallet transaction history
+      operationId: getWalletTransactions
+      responses:
+        '200':
+          description: Transaction list
+
+  /portal/wallet/transfers/potential-receivers:
+    get:
+      tags: [Portal - Wallet]
+      summary: Get potential wallet transfer recipients
+      operationId: getPotentialReceivers
+      responses:
+        '200':
+          description: List of potential recipients
+
+  # ──────────────────────────────────────────────
+  # PORTAL - REPORTS
+  # ──────────────────────────────────────────────
+  /portal/reports/sales-overview:
+    get:
+      tags: [Portal - Reports]
+      summary: Sales overview report
+      operationId: getSalesOverview
+      responses:
+        '200':
+          description: Sales overview data
+
+  /portal/reports/quick-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check quick report generation status
+      operationId: getQuickReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/bulk-sales-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check bulk sales report status
+      operationId: getBulkSalesReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/tracks-earning-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check tracks earning report status
+      operationId: getTracksEarningReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/artists-earning-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check artists earning report status
+      operationId: getArtistsEarningReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/trends-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check trends report status
+      operationId: getTrendsReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/stream-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check stream report status
+      operationId: getStreamReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/release-links-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check release links report status
+      operationId: getReleaseLinksReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/additional-report-status:
+    get:
+      tags: [Portal - Reports]
+      summary: Check additional report status
+      operationId: getAdditionalReportStatus
+      responses:
+        '200':
+          description: Report status
+
+  /portal/reports/download/trends-report:
+    post:
+      tags: [Portal - Reports]
+      summary: Download a trends report
+      operationId: downloadTrendsReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stream:
+                  type: string
+                  description: Data stream identifier
+                  example: spotify trend data
+                title:
+                  type: string
+                  example: Spotify Raw Data
+                status:
+                  type: string
+                  example: allTimeData
+      responses:
+        '200':
+          description: Report file or download URL
+
+  /portal/reports/download/catalog-overview:
+    post:
+      tags: [Portal - Reports]
+      summary: Download catalog overview report
+      operationId: downloadCatalogOverview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: array
+                  items:
+                    type: integer
+                  example: [1]
+      responses:
+        '200':
+          description: Report file or download URL
+
+  # ──────────────────────────────────────────────
+  # PORTAL - NOTIFICATIONS
+  # ──────────────────────────────────────────────
+  /portal/notifications:
+    get:
+      tags: [Portal - Notifications]
+      summary: List notifications
+      operationId: getNotifications
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Paginated notification list
+
+  /portal/notifications/user-notification:
+    get:
+      tags: [Portal - Notifications]
+      summary: Get user notification preferences/count
+      operationId: getUserNotification
+      responses:
+        '200':
+          description: Notification info
+
+  /portal/notifications/read:
+    post:
+      tags: [Portal - Notifications]
+      summary: Mark notifications as read
+      operationId: markNotificationsRead
+      responses:
+        '200':
+          description: Notifications marked
+
+  /portal/notifications/{notificationId}/file-url:
+    get:
+      tags: [Portal - Notifications]
+      summary: Get file URL attached to a notification
+      operationId: getNotificationFileUrl
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File URL
+
+  # ──────────────────────────────────────────────
+  # PORTAL - PREFERENCES
+  # ──────────────────────────────────────────────
+  /portal/preferences/artists:
+    get:
+      tags: [Portal - Preferences]
+      summary: List saved artists
+      operationId: getPreferencesArtists
+      responses:
+        '200':
+          description: Artist list
+
+  /portal/preferences/label/:
+    get:
+      tags: [Portal - Preferences]
+      summary: List labels
+      operationId: getPreferencesLabels
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated label list
+
+  /portal/preferences/artist-via-link:
+    get:
+      tags: [Portal - Preferences]
+      summary: Look up artist by platform link
+      operationId: getArtistViaLink
+      parameters:
+        - name: link
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [spotify, apple, amazonMusic, meta, soundcloud]
+      responses:
+        '200':
+          description: Artist info from link
+
+  /portal/preferences/search/artist-platform:
+    post:
+      tags: [Portal - Preferences]
+      summary: Search for an artist on a platform
+      operationId: searchArtistPlatform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [term, platform]
+              properties:
+                term:
+                  type: string
+                  description: Search term
+                platform:
+                  type: string
+                  enum: [spotify, apple, amazonMusic, meta, soundcloud]
+      responses:
+        '200':
+          description: Search results
+
+  # ──────────────────────────────────────────────
+  # PORTAL - AUDIENCE
+  # ──────────────────────────────────────────────
+  /portal/audience/findAll/:
+    get:
+      tags: [Portal - Audience]
+      summary: List audience/fans
+      operationId: findAllAudience
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: filter
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated audience list
+
+  /portal/audience/refresh-status:
+    get:
+      tags: [Portal - Audience]
+      summary: Check audience data refresh status
+      operationId: getAudienceRefreshStatus
+      responses:
+        '200':
+          description: Refresh status
+
+  # ──────────────────────────────────────────────
+  # PORTAL - DEFENDER (WHITELIST / BLOCKLIST)
+  # ──────────────────────────────────────────────
+  /portal/whitelist/:
+    get:
+      tags: [Portal - Defender]
+      summary: Get whitelist entries
+      operationId: getWhitelist
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Whitelist data
+
+  /portal/blocklist/:
+    get:
+      tags: [Portal - Defender]
+      summary: Get blocklist entries
+      operationId: getBlocklist
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blocklist data
+
+  /portal/defender/status:
+    get:
+      tags: [Portal - Defender]
+      summary: Get defender protection status
+      operationId: getDefenderStatus
+      responses:
+        '200':
+          description: Defender status
+
+  # ──────────────────────────────────────────────
+  # PORTAL - QUICKLINKS
+  # ──────────────────────────────────────────────
+  /portal/quicklink/get/:
+    get:
+      tags: [Portal - Quicklinks]
+      summary: List quick links
+      operationId: getQuicklinks
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quicklink list
+
+  /portal/quicklink/init/{releaseId}:
+    post:
+      tags: [Portal - Quicklinks]
+      summary: Initialize a quick link for a release
+      operationId: initQuicklink
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Quicklink created
+
+  # ──────────────────────────────────────────────
+  # PORTAL - FUNDING
+  # ──────────────────────────────────────────────
+  /portal/funding/submissions:
+    get:
+      tags: [Portal - Funding]
+      summary: Get funding submissions
+      operationId: getFundingSubmissions
+      responses:
+        '200':
+          description: Funding submissions
+
+  /portal/funding/pending-submissions:
+    get:
+      tags: [Portal - Funding]
+      summary: Get pending funding submissions
+      operationId: getPendingFundingSubmissions
+      parameters:
+        - $ref: '#/components/parameters/page'
+      responses:
+        '200':
+          description: Pending submissions
+
+  /portal/funding/spotify-artist/:
+    get:
+      tags: [Portal - Funding]
+      summary: Get Spotify artist info for funding
+      operationId: getFundingSpotifyArtist
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Spotify artist data
+
+  # ──────────────────────────────────────────────
+  # PORTAL - PUBLISHING
+  # ──────────────────────────────────────────────
+  /portal/publishing/:
+    get:
+      tags: [Portal - Publishing]
+      summary: List publishing submissions
+      operationId: getPublishing
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Publishing data
+
+  /portal/cosynd/:
+    get:
+      tags: [Portal - Publishing]
+      summary: Get copyright registration (Cosynd) data
+      operationId: getCosynd
+      responses:
+        '200':
+          description: Cosynd registrations
+
+  # ──────────────────────────────────────────────
+  # PORTAL - AI INSIGHTS
+  # ──────────────────────────────────────────────
+  /portal/ai-insights/results:
+    get:
+      tags: [Portal - AI Insights]
+      summary: Get AI insight results
+      operationId: getAiInsightResults
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: AI insight results
+
+  /portal/ai-insights/artworks:
+    get:
+      tags: [Portal - AI Insights]
+      summary: Get AI-generated artwork suggestions
+      operationId: getAiArtworks
+      responses:
+        '200':
+          description: AI artwork data
+
+  # ──────────────────────────────────────────────
+  # PORTAL - AWARD MONITORING
+  # ──────────────────────────────────────────────
+  /portal/award-monitoring/countries:
+    get:
+      tags: [Portal - Award Monitoring]
+      summary: List available award monitoring countries
+      operationId: getAwardCountries
+      responses:
+        '200':
+          description: Country list
+
+  /portal/award-monitoring/market/{countryCode}:
+    get:
+      tags: [Portal - Award Monitoring]
+      summary: Get award/chart data for a specific market
+      operationId: getAwardMarket
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+            example: US
+            description: ISO 3166-1 alpha-2 country code
+        - $ref: '#/components/parameters/page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Chart/award data for the market
+
+  # ──────────────────────────────────────────────
+  # PORTAL - PLAYLISTING
+  # ──────────────────────────────────────────────
+  /portal/playlisting/:
+    get:
+      tags: [Portal - Playlisting]
+      summary: Get playlist pitching submissions
+      operationId: getPlaylisting
+      parameters:
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Playlisting data
+
+  # ──────────────────────────────────────────────
+  # PORTAL - MIXING
+  # ──────────────────────────────────────────────
+  /portal/mixing:
+    get:
+      tags: [Portal - Mixing]
+      summary: Get mixing submissions
+      operationId: getMixing
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: filter
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mixing data
+
+  # ──────────────────────────────────────────────
+  # PORTAL - CHANNEL MONETIZATION
+  # ──────────────────────────────────────────────
+  /v1/portal/channel-monetization/channel-list:
+    get:
+      tags: [Portal - Channel Monetization]
+      summary: List YouTube channels for monetization
+      operationId: getChannelList
+      responses:
+        '200':
+          description: Channel list
+
+  /v1/portal/channel-monetization/fetch-channels:
+    get:
+      tags: [Portal - Channel Monetization]
+      summary: Fetch/sync YouTube channels
+      operationId: fetchChannels
+      responses:
+        '200':
+          description: Fetched channels
+
+  /v1/portal/cid-conflicts:
+    get:
+      tags: [Portal - Channel Monetization]
+      summary: Get Content ID conflicts
+      operationId: getCidConflicts
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+        - name: sort_dir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: CID conflict list
+
+  # ──────────────────────────────────────────────
+  # PORTAL - MANAGER
+  # ──────────────────────────────────────────────
+  /portal/manager/list:
+    get:
+      tags: [Portal - Manager]
+      summary: List team managers
+      operationId: getManagerList
+      responses:
+        '200':
+          description: Manager list
+
+  /portal/manager/default-permissions:
+    get:
+      tags: [Portal - Manager]
+      summary: Get default manager permissions
+      operationId: getDefaultPermissions
+      responses:
+        '200':
+          description: Default permission set
+
+  # ──────────────────────────────────────────────
+  # RELEASES (VIDEO)
+  # ──────────────────────────────────────────────
+  /releases/{releaseId}/video:
+    get:
+      tags: [Video]
+      summary: Get video page for a release
+      operationId: getReleaseVideo
+      parameters:
+        - $ref: '#/components/parameters/releaseId'
+      responses:
+        '200':
+          description: Video data or HTML page
+
+  # ──────────────────────────────────────────────
+  # PROFILE
+  # ──────────────────────────────────────────────
+  /profile/payout/pending-status:
+    get:
+      tags: [Profile]
+      summary: Check pending payout status
+      operationId: getPayoutPendingStatus
+      responses:
+        '200':
+          description: Pending payout status
+
+  /profile/get-even-spotify-link:
+    get:
+      tags: [Profile]
+      summary: Get Even (Spotify pre-save) link info
+      operationId: getEvenSpotifyLink
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Even link data
+
+  # ──────────────────────────────────────────────
+  # LANDING
+  # ──────────────────────────────────────────────
+  /landing/articles:
+    get:
+      tags: [Portal - Dashboard]
+      summary: Get landing page articles/blog posts
+      operationId: getLandingArticles
+      responses:
+        '200':
+          description: Article list
+
+  # ──────────────────────────────────────────────
+  # SHARED / STATIC
+  # ──────────────────────────────────────────────
+  /shared/static/countries:
+    get:
+      tags: [Shared]
+      summary: List all countries
+      operationId: getCountries
+      responses:
+        '200':
+          description: Country list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          example: US
+                        name:
+                          type: string
+                          example: United States
+
+  /shared/static/platforms:
+    get:
+      tags: [Shared]
+      summary: List all distribution platforms
+      operationId: getPlatforms
+      responses:
+        '200':
+          description: Platform list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /shared/genres/list:
+    get:
+      tags: [Shared]
+      summary: List all available genres
+      operationId: getGenres
+      responses:
+        '200':
+          description: Genre list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Pop
+                      - Rock
+                      - Hip-Hop/Rap
+                      - Electronic
+                      - R&B/Soul
+
+# ═══════════════════════════════════════════════
+# COMPONENTS
+# ═══════════════════════════════════════════════
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: toolost_session
+      description: Session cookie set after login
+
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    releaseId:
+      name: releaseId
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    # ── User ──
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+        confirmed:
+          type: integer
+        type:
+          type: string
+          enum: [artist, label]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        priority_member:
+          type: integer
+        admin_access:
+          type: integer
+        website:
+          type: string
+          nullable: true
+        banned:
+          type: integer
+        is_subscribed_newsletter:
+          type: integer
+        has_completed_init:
+          type: integer
+        bulk_import_option:
+          type: integer
+        instant_advance:
+          type: integer
+        asset_tokens:
+          type: integer
+        production_music_account:
+          type: integer
+
+    # ── Release (response) ──
+    Release:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        status:
+          type: integer
+          description: "0=Draft, 1=Live, 2=Pending, 3=Takedown, etc."
+        title:
+          type: string
+        remix_or_version:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [Single, EP, Album]
+        upc:
+          type: string
+        catalog_number:
+          type: string
+        label:
+          type: string
+        primary_genre:
+          type: string
+        secondary_genre:
+          type: string
+          nullable: true
+        language:
+          type: string
+        license_type:
+          type: string
+          enum: [Copyright, Creative Commons]
+        license_info:
+          type: string
+          nullable: true
+        c_year:
+          type: string
+        c_line:
+          type: string
+        p_year:
+          type: string
+        p_line:
+          type: string
+        territories:
+          type: string
+          nullable: true
+        cover_url:
+          type: string
+          format: uri
+        cover_url_small:
+          type: string
+          format: uri
+        cover_url_medium:
+          type: string
+          format: uri
+        cover_url_large:
+          type: string
+          format: uri
+        release_date:
+          type: string
+          format: date
+        original_release_date:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        remix_title:
+          type: string
+          nullable: true
+        cover_songs:
+          type: string
+          nullable: true
+        is_ai_cover_url:
+          type: integer
+        delivery_soundcloud:
+          type: integer
+        delivery_youtube:
+          type: integer
+        delivery_soundexchange:
+          type: integer
+        delivery_beatport:
+          type: integer
+        delivery_junodownload:
+          type: integer
+        delivery_tracklib:
+          type: integer
+        delivery_facebook:
+          type: integer
+        delivery_hook:
+          type: integer
+        delivery_audiosalad_completed:
+          type: integer
+        admin_review:
+          type: integer
+        priority_review:
+          type: integer
+        restrict_takedown:
+          type: integer
+
+    # ── Release (input) ──
+    ReleaseInput:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+          description: "null for new releases, set for updates"
+        type:
+          type: string
+          enum: [Single, EP, Album]
+        title:
+          type: string
+        coverUrl:
+          type: string
+          format: uri
+        compressedArtwork:
+          type: string
+          format: uri
+        motion_art_1_1:
+          type: string
+          nullable: true
+        motion_art_3_4:
+          type: string
+          nullable: true
+        isAiGenerated:
+          type: boolean
+        version:
+          type: string
+          nullable: true
+          enum: [Original, Remix, Live, Remastered]
+        remixTitle:
+          type: string
+        coverSongs:
+          type: string
+        label:
+          type: string
+        upc:
+          type: string
+          description: Leave empty to auto-generate
+        primaryGenre:
+          type: string
+        secondaryGenre:
+          type: string
+          nullable: true
+        language:
+          type: string
+          description: ISO 639-1 code
+          example: en
+        originalReleaseDate:
+          type: string
+          format: date
+        releaseDate:
+          type: string
+          format: date
+        applePreorder:
+          type: boolean
+        applePreorderDate:
+          type: string
+          format: date
+          nullable: true
+        licenseType:
+          type: string
+          enum: [Copyright, Creative Commons]
+        licenseInfo:
+          type: string
+        cYear:
+          type: string
+        cLine:
+          type: string
+        pYear:
+          type: string
+        pLine:
+          type: string
+        soundCloud:
+          type: integer
+          description: "0 or 1 — deliver to SoundCloud"
+        trackLibs:
+          type: integer
+        junoDownloads:
+          type: integer
+        beatPort:
+          type: integer
+        beatPortForm:
+          type: object
+          properties:
+            hasAccount:
+              type: boolean
+            deliveryLink:
+              type: string
+            logo:
+              type: string
+            removeImg:
+              type: boolean
+            newLogo:
+              type: string
+              nullable: true
+            link:
+              type: string
+              nullable: true
+        soundExchange:
+          type: integer
+        facebook:
+          type: integer
+        hook:
+          type: integer
+        udio:
+          type: integer
+        lyricfind:
+          type: integer
+        even:
+          type: integer
+        youtube:
+          type: integer
+        itunesPricingTier:
+          type: string
+          example: digital_45
+        itunesTrackPricingTier:
+          type: string
+          example: front
+        timeZone:
+          type: string
+          nullable: true
+        releaseTime:
+          type: string
+          nullable: true
+        reviewNote:
+          type: string
+        reviewFileName:
+          type: string
+        reviewFile:
+          type: string
+          nullable: true
+        aiDocumentationFileUrl:
+          type: string
+          nullable: true
+        aiDocumentationFileName:
+          type: string
+          nullable: true
+        territories:
+          type: array
+          items:
+            type: string
+          description: ISO country codes; empty = worldwide
+        platforms:
+          type: array
+          items:
+            type: string
+          description: Platform IDs; empty = all platforms
+        platformActive:
+          type: boolean
+          description: Whether custom platform selection is active
+        trackCount:
+          type: integer
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
+        selectedLicenses:
+          type: array
+          items:
+            type: object
+
+    # ── Track (response) ──
+    Track:
+      type: object
+      properties:
+        id:
+          type: integer
+        release_id:
+          type: integer
+        title:
+          type: string
+        isrc:
+          type: string
+        iswc:
+          type: string
+          nullable: true
+        language:
+          type: string
+        explicit_lyrics:
+          type: integer
+        clean_version:
+          type: integer
+        remix_or_version:
+          type: string
+          nullable: true
+        primary_genre:
+          type: string
+          nullable: true
+        secondary_genre:
+          type: string
+          nullable: true
+        p_year:
+          type: string
+          nullable: true
+        p_line:
+          type: string
+          nullable: true
+        audio_url:
+          type: string
+        liner_note:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ── Track (input) ──
+    TrackInput:
+      type: object
+      required: [title, url]
+      properties:
+        id:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        isrc:
+          type: string
+          description: Leave empty to auto-generate
+        iswc:
+          type: string
+          nullable: true
+        language:
+          type: string
+        tiktokStartTime:
+          type: object
+          properties:
+            min:
+              type: string
+            sec:
+              type: string
+        url:
+          type: string
+          description: S3 audio file path
+        linerNote:
+          type: string
+          nullable: true
+        version:
+          type: string
+          nullable: true
+        lyrics:
+          type: string
+          nullable: true
+        explicitLyrics:
+          type: boolean
+        cleanVersion:
+          type: boolean
+        instrumentalUrl:
+          type: string
+          nullable: true
+        dolbyUrl:
+          type: string
+          nullable: true
+        admFileUrl:
+          type: boolean
+        admEmail:
+          type: string
+        aiAssisted:
+          type: boolean
+        aiAssistedFileUrl:
+          type: string
+          nullable: true
+        aiAssistedFileName:
+          type: string
+          nullable: true
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackArtist'
+        writers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              role:
+                type: string
+                enum: [author, composer, instrumentalist, arranger, publisher]
+        credits:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              role:
+                type: string
+                description: Semicolon-separated roles
+                example: "Lead Vocals;Executive Producer"
+
+    # ── Participant ──
+    Participant:
+      type: object
+      properties:
+        id:
+          oneOf:
+            - type: integer
+            - type: string
+        name:
+          type: string
+        artistId:
+          type: integer
+          nullable: true
+        role:
+          type: string
+          enum: [primary, featured, remixer]
+        connect:
+          $ref: '#/components/schemas/ArtistConnect'
+
+    # ── Track Artist ──
+    TrackArtist:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        default:
+          type: boolean
+        role:
+          type: string
+          enum: [primary, featured, remixer]
+        connect:
+          $ref: '#/components/schemas/ArtistConnect'
+
+    # ── Artist Platform Connections ──
+    ArtistConnect:
+      type: object
+      properties:
+        spotify:
+          $ref: '#/components/schemas/PlatformLink'
+        apple:
+          $ref: '#/components/schemas/PlatformLink'
+        amazonMusic:
+          $ref: '#/components/schemas/PlatformLink'
+        meta:
+          $ref: '#/components/schemas/PlatformLink'
+        soundcloud:
+          $ref: '#/components/schemas/PlatformLink'
+
+    PlatformLink:
+      type: object
+      properties:
+        status:
+          type: boolean
+        url:
+          type: string
+          format: uri
+          nullable: true
+
+    # ── Wallet Balance ──
+    WalletBalance:
+      type: object
+      properties:
+        available:
+          type: number
+          format: double
+        earnings:
+          type: number
+          format: double
+        adjustment:
+          type: number
+          format: double
+        manual_entry:
+          type: number
+          format: double
+        wallet_incoming:
+          type: number
+          format: double
+        wallet_outgoing:
+          type: number
+          format: double
+        payouts:
+          type: number
+          format: double
+        sales:
+          type: number
+          format: double
+        publishing:
+          type: number
+          format: double
+        cover_licensing_refund:
+          type: number
+          format: double
+        youtube_mcn:
+          type: number
+          format: double
+
+    # ── Pagination wrapper ──
+    PaginatedResponse:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        data:
+          type: array
+          items:
+            type: object
+        first_page_url:
+          type: string
+        from:
+          type: integer
+          nullable: true
+        last_page:
+          type: integer
+        last_page_url:
+          type: string
+        next_page_url:
+          type: string
+          nullable: true
+        path:
+          type: string
+        per_page:
+          type: integer
+        prev_page_url:
+          type: string
+          nullable: true
+        to:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+
+security:
+  - cookieAuth: []
